@@ -61,7 +61,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Internal\CompatibilityExtensions.cs" />
-    <Compile Include="Internal\JsonPathExpressionInput.cs" />
     <Compile Include="Internal\JsonPathInput.cs" />
     <Compile Include="Internal\XmlNamespacePair.cs" />
     <Compile Include="Internal\XmlNamespaceRegistry.cs" />
@@ -417,6 +416,7 @@
     </Compile>
     <Compile Include="Properties\StringFormatMethodAttribute.cs" />
     <Compile Include="Transform\JsonTransformer.cs" />
+    <Compile Include="UriExtensions.cs" />
     <Compile Include="XmlExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -427,7 +427,8 @@
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>if "$(Configuration)" == "Release" (powershell "&amp; $(ProjectDir)\nuget.ps1" -nuspecFile "$(ProjectDir)\project.nuspec")</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

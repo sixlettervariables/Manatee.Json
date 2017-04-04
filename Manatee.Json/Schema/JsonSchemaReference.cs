@@ -1,27 +1,4 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		JsonSchemaReference.cs
-	Namespace:		Manatee.Json.Schema
-	Class Name:		JsonSchemaReference
-	Purpose:		Defines a reference to a schema.
-
-***************************************************************************************/
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -147,18 +124,26 @@ namespace Manatee.Json.Schema
 				{
 					address = allIds.Pop() + address;
 				}
-				jValue = JsonSchemaRegistry.Get(address).ToJson(null);
+
+				Uri absolute;
+
+				if (DocumentPath != null && !Uri.TryCreate(address, UriKind.Absolute, out absolute))
+				{
+					DocumentPath = new Uri(DocumentPath.GetParentUri(), address);
+				}
+
+				jValue = JsonSchemaRegistry.Get(DocumentPath?.ToString() ?? address).ToJson(null);
 			}
 			if (jValue == null) return root;
 			if (jValue == _rootJson) throw new ArgumentException("Cannot use a root reference as the base schema.");
  
-			Resolved = ResolveLocalReference(jValue, path);
+			Resolved = ResolveLocalReference(jValue, path, DocumentPath);
 			return jValue;
 		}
-		private static IJsonSchema ResolveLocalReference(JsonValue root, string path)
+		private static IJsonSchema ResolveLocalReference(JsonValue root, string path, Uri documentPath)
 		{
 			var properties = path.Split('/').Skip(1).ToList();
-			if (!properties.Any()) return JsonSchemaFactory.FromJson(root);
+			if (!properties.Any()) return JsonSchemaFactory.FromJson(root, documentPath);
 			var value = root;
 			foreach (var property in properties)
 			{
@@ -175,7 +160,7 @@ namespace Manatee.Json.Schema
 					value = value.Array[index];
 				}
 			}
-			return JsonSchemaFactory.FromJson(value);
+			return JsonSchemaFactory.FromJson(value, documentPath);
 		}
 		private static string Unescape(string reference)
 		{

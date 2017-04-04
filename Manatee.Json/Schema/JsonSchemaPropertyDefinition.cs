@@ -1,27 +1,4 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		JsonSchemaPropertyDefinition.cs
-	Namespace:		Manatee.Json.Schema
-	Class Name:		JsonSchemaPropertyDefinition
-	Purpose:		Defines a single property within a schema.
-
-***************************************************************************************/
-
-using System;
+﻿using System;
 using System.Linq;
 using Manatee.Json.Internal;
 using Manatee.Json.Serialization;
@@ -45,6 +22,11 @@ namespace Manatee.Json.Schema
 		/// Defines whether this property is required.
 		/// </summary>
 		public bool IsRequired { get; set; }
+		/// <summary>
+		/// Defines whether this property should be hidden from the schema Properties collection when serialized.
+		/// This is useful when the property is required but not included in the Properties collection.
+		/// </summary>
+		public bool IsHidden { get; set; }
 
 		/// <summary>
 		/// Creates a new instance of the <see cref="JsonSchemaPropertyDefinition"/> class.

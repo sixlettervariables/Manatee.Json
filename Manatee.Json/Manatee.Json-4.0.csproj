@@ -50,7 +50,6 @@
   <ItemGroup />
   <ItemGroup>
     <Compile Include="..\Manatee.Json\Internal\GeneralExtensions.cs" />
-    <Compile Include="..\Manatee.Json\Internal\JsonPathExpressionInput.cs" />
     <Compile Include="..\Manatee.Json\Internal\JsonPathInput.cs" />
     <Compile Include="..\Manatee.Json\Internal\XmlNamespacePair.cs" />
     <Compile Include="..\Manatee.Json\Internal\XmlNamespaceRegistry.cs" />
@@ -297,6 +296,7 @@
     <Compile Include="..\Manatee.Json\XmlExtensions.cs" />
     <Compile Include="Internal\CompatibilityExtensions.cs" />
     <Compile Include="Serialization\Internal\Serializers\MemberExpression.cs" />
+    <Compile Include="UriExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Manatee.Json.snk" />

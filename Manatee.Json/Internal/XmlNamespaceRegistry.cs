@@ -1,28 +1,4 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		XmlNamespacePair.cs
-	Namespace:		Manatee.Json.Internal
-	Class Name:		XmlNamespacePair
-	Purpose:		Maintains a cache of namespace pairs defined by a given
-					XML element.
-
-***************************************************************************************/
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
@@ -34,7 +10,7 @@ namespace Manatee.Json.Internal
 		[ThreadStatic]
 		private static XmlNamespaceRegistry _instance;
 
-		public static XmlNamespaceRegistry Instance { get { return _instance ?? (_instance = new XmlNamespaceRegistry()); } }
+		public static XmlNamespaceRegistry Instance => _instance ?? (_instance = new XmlNamespaceRegistry());
 
 		private XmlNamespaceRegistry() {}
 
@@ -58,7 +34,8 @@ namespace Manatee.Json.Internal
 		}
 		public bool ElementDefinesNamespace(XElement element, string space)
 		{
-			return _registry.ContainsKey(element) && _registry[element].Any(pair => pair.Namespace == space);
+			List<XmlNamespacePair> entry;
+			return _registry.TryGetValue(element, out entry) && entry.Any(pair => pair.Namespace == space);
 		}
 		public string GetLabel(XElement element, string space)
 		{
@@ -67,9 +44,13 @@ namespace Manatee.Json.Internal
 
 		public void Register(string label, string space)
 		{
-			if (!_stack.ContainsKey(label))
-				_stack.Add(label, new Stack<string>());
-			_stack[label].Push(space);
+			Stack<string> entry;
+			if (!_stack.TryGetValue(label, out entry))
+			{
+				entry = new Stack<string>();
+				_stack.Add(label, entry);
+			}
+			entry.Push(space);
 		}
 		public void Unregister(string label)
 		{
@@ -79,8 +60,9 @@ namespace Manatee.Json.Internal
 		}
 		public string GetNamespace(string label)
 		{
-			if (!_stack.ContainsKey(label)) return null;
-			return _stack[label].Count == 0 ? null : _stack[label].Peek();
+			Stack<string> entry;
+			if (!_stack.TryGetValue(label, out entry)) return null;
+			return _stack.TryGetValue(label, out entry) && entry.Count != 0 ? entry.Peek() : null;
 		}
 	}
 }

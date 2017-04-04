@@ -1,25 +1,4 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		JsonSchemaCollection.cs
-	Namespace:		Manatee.Json.Schema
-	Class Name:		JsonSchemaCollection
-	Purpose:		Represents a collection of schemata.
-
-***************************************************************************************/
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Manatee.Json.Serialization;
@@ -31,6 +10,11 @@ namespace Manatee.Json.Schema
 	/// </summary>
 	public class JsonSchemaCollection : List<IJsonSchema>, IJsonSchema
 	{
+		/// <summary>
+		/// Identifies the physical path for the schema document (may be different than the ID).
+		/// </summary>
+		public Uri DocumentPath { get; set; }
+
 		/// <summary>
 		/// Validates a <see cref="JsonValue"/> against the schema.
 		/// </summary>
@@ -59,7 +43,7 @@ namespace Manatee.Json.Schema
 		/// serialization of values.</param>
 		public void FromJson(JsonValue json, JsonSerializer serializer)
 		{
-			AddRange(json.Array.Select(JsonSchemaFactory.FromJson));
+			AddRange(json.Array.Select(j => JsonSchemaFactory.FromJson(j, DocumentPath)));
 		}
 		/// <summary>
 		/// Converts an object to a <see cref="JsonValue"/>.

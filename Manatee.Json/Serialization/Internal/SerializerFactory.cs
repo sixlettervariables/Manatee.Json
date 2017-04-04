@@ -1,27 +1,4 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		SerializerFactory.cs
-	Namespace:		Manatee.Json.Serialization.Internal
-	Class Name:		SerializerFactory
-	Purpose:		Manages ISerializer implementations for use by the JsonSerializer.
-
-***************************************************************************************/
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Manatee.Json.Internal;
 using Manatee.Json.Schema;
@@ -101,8 +78,9 @@ namespace Manatee.Json.Serialization.Internal
 						throw new ArgumentOutOfRangeException();
 				}
 			}
-			if (_library.ContainsKey(typeToSerialize))
-				return BuildSerializer(_library[typeToSerialize]);
+			ISerializer serializer;
+			if (_library.TryGetValue(typeToSerialize, out serializer))
+				return BuildSerializer(serializer);
 			return BuildSerializer(_autoSerializer);
 		}
 		public static ITypeSerializer GetTypeSerializer<T>(JsonSerializerOptions options)
