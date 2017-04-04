@@ -1,29 +1,7 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		JsonSerializationAbstractionMap.cs
-	Namespace:		Manatee.Json.Serialization
-	Class Name:		JsonSerializationAbstractionMap
-	Purpose:		Maps interfaces and abstract classes to concrete classes and
-					in order to provide instances during instantia.
-
-***************************************************************************************/
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Manatee.Json.Internal;
 using Manatee.Json.Serialization.Internal;
 
@@ -53,7 +31,7 @@ namespace Manatee.Json.Serialization
 		public static void Map<TAbstract, TConcrete>(MapBaseAbstractionBehavior mappingBehavior = MapBaseAbstractionBehavior.Unmapped)
 			where TConcrete : TAbstract, new()
 		{
-			if (typeof(TConcrete).IsAbstract || typeof(TConcrete).IsInterface)
+			if (typeof(TConcrete).TypeInfo().IsAbstract || typeof(TConcrete).TypeInfo().IsInterface)
 				throw new JsonTypeMapException<TAbstract, TConcrete>();
 			var tAbstract = typeof (TAbstract);
 			var tConcrete = typeof (TConcrete);
@@ -70,7 +48,7 @@ namespace Manatee.Json.Serialization
 		/// from <paramref name="tAbstract"/>.</exception>
 		public static void MapGeneric(Type tAbstract, Type tConcrete, MapBaseAbstractionBehavior mappingBehavior = MapBaseAbstractionBehavior.Unmapped)
 		{
-			if (tConcrete.IsAbstract || tConcrete.IsInterface)
+			if (tConcrete.TypeInfo().IsAbstract || tConcrete.TypeInfo().IsInterface)
 				throw new JsonTypeMapException(tAbstract, tConcrete);
 			if (!tConcrete.InheritsFrom(tAbstract))
 				throw new JsonTypeMapException(tAbstract, tConcrete);
@@ -84,10 +62,12 @@ namespace Manatee.Json.Serialization
 		public static void RemoveMap<TAbstract>(bool removeRelated = true)
 		{
 			var tAbstract = typeof (TAbstract);
-			if (!_registry.ContainsKey(tAbstract)) return;
-			var tConcrete = _registry[tAbstract];
-			_registry.Remove(typeof (TAbstract));
+			Type tConcrete;
+			if (!_registry.TryGetValue(tAbstract, out tConcrete)) return;
+
+			_registry.Remove(tAbstract);
 			if (!removeRelated) return;
+
 			var removeTypes = _registry.Where(kvp => kvp.Value == tConcrete).Select(kvp => kvp.Key).ToList();
 			foreach (var type in removeTypes)
 			{
@@ -101,15 +81,17 @@ namespace Manatee.Json.Serialization
 		/// <returns>The mapped type if a mapping exists; otherwise the abstraction type.</returns>
 		public static Type GetMap(Type type)
 		{
-			if (!type.IsAbstract && !type.IsInterface) return type;
-			if (_registry.ContainsKey(type)) return _registry[type];
-			if (type.IsGenericType)
+			if (!type.TypeInfo().IsAbstract && !type.TypeInfo().IsInterface) return type;
+			Type tConcrete;
+			if (_registry.TryGetValue(type, out tConcrete)) return tConcrete;
+
+			if (type.TypeInfo().IsGenericType)
 			{
 				var genericDefinition = type.GetGenericTypeDefinition();
-				var genericMatches = _registry.Where(t => t.Key.IsGenericTypeDefinition && t.Key.GetGenericTypeDefinition() == genericDefinition).ToList();
+				var genericMatches = _registry.Where(t => t.Key.TypeInfo().IsGenericTypeDefinition && t.Key.GetGenericTypeDefinition() == genericDefinition).ToList();
 				if (genericMatches.Any())
 				{
-					var typeArguments = type.GetGenericArguments();
+					var typeArguments = type.GetTypeArguments();
 					return genericMatches.First().Value.MakeGenericType(typeArguments);
 				}
 			}
@@ -119,23 +101,29 @@ namespace Manatee.Json.Serialization
 		internal static T CreateInstance<T>(JsonValue json, IResolver resolver)
 		{
 			var type = typeof (T);
-			if (type.IsAbstract || type.IsInterface || type.IsGenericType)
+			if (type.TypeInfo().IsAbstract || type.TypeInfo().IsInterface || type.TypeInfo().IsGenericType)
 			{
 				if ((json != null) && (json.Type == JsonValueType.Object) && (json.Object.ContainsKey(Constants.TypeKey)))
 				{
 					var concrete = Type.GetType(json.Object[Constants.TypeKey].String);
 					return (T) resolver.Resolve(concrete);
 				}
-				if (!_registry.ContainsKey(type) && type.IsGenericType)
-					type = type.GetGenericTypeDefinition();
-				if (_registry.ContainsKey(type))
+				Type tConcrete;
+				if (!_registry.TryGetValue(type, out tConcrete))
 				{
-					var concrete = _registry[type];
-					if (concrete.IsGenericTypeDefinition)
-						concrete = concrete.MakeGenericType(typeof (T).GetGenericArguments());
-					return (T) resolver.Resolve(concrete);
+					if (type.TypeInfo().IsGenericType)
+						type = type.GetGenericTypeDefinition();
+					_registry.TryGetValue(type, out tConcrete);
 				}
-#if !IOS
+
+				if (tConcrete != null)
+				{
+					if (tConcrete.TypeInfo().IsGenericTypeDefinition)
+						tConcrete = tConcrete.MakeGenericType(typeof(T).GetTypeArguments());
+					return (T) resolver.Resolve(tConcrete);
+				}
+
+#if !IOS && !CORE
 				if (type.IsInterface)
 					return TypeGenerator.Generate<T>();
 #endif
@@ -159,13 +147,13 @@ namespace Manatee.Json.Serialization
 		private static void MapBaseTypes(Type tAbstract, Type tConcrete, bool overwrite)
 		{
 			if (tAbstract == null) return;
-			var tBase = tAbstract.BaseType;
+			var tBase = tAbstract.TypeInfo().BaseType;
 			if ((tBase != null) && (overwrite || !_registry.ContainsKey(tBase)))
 			{
 				_registry[tBase] = tConcrete;
 			}
 			MapBaseTypes(tBase, tConcrete, overwrite);
-			foreach (var tInterface in tAbstract.GetInterfaces())
+			foreach (var tInterface in tAbstract.TypeInfo().GetInterfaces())
 			{
 				if (overwrite || !_registry.ContainsKey(tInterface))
 				{

@@ -12,6 +12,8 @@ namespace Manatee.Json.Tests
 	[TestClass]
 	public class ClientTest
 	{
+		public TestContext TestContext { get; set; }
+
 		[TestMethod]
 		public void Parse_StringFromSourceForge_kheimric()
 		{
@@ -209,6 +211,139 @@ namespace Manatee.Json.Tests
 			var results = path.Evaluate(json);
 
 			Assert.AreEqual(new JsonArray { "red", 19.95 }, results);
+		}
+
+		[TestMethod]
+		[DeploymentItem(@"Files\baseSchema.json")]
+		[DeploymentItem(@"Files\refSchema.json")]
+		public void Issue45a_Utf8SupportInReferenceSchemaEnums()
+		{
+			// replace with your full path to the schema file.
+			const string fileName = @"C:\Users\gregd\OneDrive\Projects\Manatee.Json\Manatee.Json.Tests\Files\baseSchema.json";
+			const string jsonString = "{\"prop1\": \"ændring\", \"prop2\": {\"prop3\": \"ændring\"}}";
+			var schema = JsonSchemaRegistry.Get(fileName);
+			var json = JsonValue.Parse(jsonString);
+
+			var result = schema.Validate(json);
+			Assert.IsTrue(result.Valid);
+		}
+
+		[TestMethod]
+		[DeploymentItem(@"Files\baseSchema.json")]
+		[DeploymentItem(@"Files\refSchema.json")]
+		public void Issue45b_Utf8SupportInReferenceSchemaEnums()
+		{
+			var fileName = System.IO.Path.GetFullPath(@"baseSchema.json");
+
+			const string jsonString = "{\"prop1\": \"ændring\", \"prop2\": {\"prop3\": \"ændring\"}}";
+			var schema = JsonSchemaRegistry.Get(fileName);
+			var json = JsonValue.Parse(jsonString);
+
+			var result = schema.Validate(json);
+
+			Console.WriteLine(schema.ToJson(null));
+			var refSchema = ((JsonSchemaReference)((JsonSchema)schema).Properties["prop2"].Type).Resolved;
+			Console.WriteLine(refSchema.ToJson(null));
+			Console.WriteLine(json);
+			foreach (var error in result.Errors)
+			{
+				Console.WriteLine(error);
+			}
+
+			Assert.IsTrue(result.Valid);
+		}
+
+		[TestMethod]
+		[DeploymentItem(@"Files\issue49.json")]
+		public void Issue49_RequiredAndAllOfInSingleSchema()
+		{
+			var fileName = System.IO.Path.GetFullPath("issue49.json");
+			var expected = new JsonSchema
+				{
+					Title = "JSON schema for Something",
+					Schema = "http://json-schema.org/draft-04/schema#",
+					Definitions = new JsonSchemaTypeDefinitionCollection
+						{
+							new JsonSchemaTypeDefinition("something")
+								{
+									Definition = new JsonSchema
+										{
+											Type = JsonSchemaTypeDefinition.Object,
+											Properties = new JsonSchemaPropertyDefinitionCollection
+												{
+													new JsonSchemaPropertyDefinition("name")
+														{
+															IsHidden = true,
+															IsRequired = true
+														}
+												},
+											AllOf = new[]
+												{
+													new JsonSchema
+														{
+															Properties = new JsonSchemaPropertyDefinitionCollection
+																{
+																	new JsonSchemaPropertyDefinition("name")
+																		{
+																			Type = new JsonSchema {Type = JsonSchemaTypeDefinition.String}
+																		}
+																}
+														}
+												}
+										}
+								}
+						},
+					Type = JsonSchemaTypeDefinition.Array,
+					Description = "An array of somethings.",
+					Items = new JsonSchemaReference("#/definitions/something")
+				};
+
+			var schema = JsonSchemaRegistry.Get(fileName);
+
+			Assert.AreEqual(expected, schema);
+
+			var schemaJson = schema.ToJson(null);
+			var expectedJson = expected.ToJson(null);
+
+			Console.WriteLine(schemaJson);
+			Assert.AreEqual(expectedJson, schemaJson);
+		}
+
+
+		[TestMethod]
+		[DeploymentItem(@"Files\Issue50A.json", "Files")]
+		[DeploymentItem(@"Files\Issue50B.json", "Files")]
+		[DeploymentItem(@"Files\Issue50C\Issue50D.json", @"Files\Issue50C\")]
+		[DeploymentItem(@"Files\Issue50C\Issue50E.json", @"Files\Issue50C\")]
+		[DeploymentItem(@"Files\Issue50C\Issue50F\Issue50G.json", @"Files\Issue50C\Issue50F\")]
+		public void Issue50_MulitpleSchemaInSubFoldersShouldReferenceRelatively()
+		{
+			string path = System.IO.Path.Combine(TestContext.TestDeploymentDir, @"Files\Issue50A.json");
+
+			var schema = JsonSchemaRegistry.Get(path);
+			var json = new JsonObject
+			{
+				["text"] = "something",
+				["refa"] = new JsonObject
+				{
+					["text"] = "something else",
+					["refb"] = new JsonObject()
+					{
+						["refd"] = new JsonObject()
+						{
+							["refe"] = new JsonObject() {
+								["test"] = "test"
+							},
+							["text"] = "test"
+						}
+					}
+				}
+			}; 
+				
+
+			var results = schema.Validate(json);
+
+			Assert.IsTrue(results.Valid);
 		}
 	}
 }

@@ -1,30 +1,8 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		EnumNameSerializer.cs
-	Namespace:		Manatee.Json.Serialization.Internal.Serializers
-	Class Name:		EnumNameSerializer
-	Purpose:		Converts enumerations to and from JsonValues by name.
-
-***************************************************************************************/
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using Manatee.Json.Internal;
 
 namespace Manatee.Json.Serialization.Internal.Serializers
@@ -44,7 +22,7 @@ namespace Manatee.Json.Serialization.Internal.Serializers
 		public JsonValue Serialize<T>(T obj, JsonSerializer serializer)
 		{
 			EnsureDescriptions<T>();
-			var attributes = typeof (T).GetCustomAttributes(typeof (FlagsAttribute), false);
+			var attributes = typeof (T).TypeInfo().GetCustomAttributes(typeof (FlagsAttribute), false);
 			if (!attributes.Any())
 			{
 				var entry = _descriptions[typeof (T)].FirstOrDefault(d => Equals(d.Value, obj));
@@ -56,8 +34,13 @@ namespace Manatee.Json.Serialization.Internal.Serializers
 		{
 			EnsureDescriptions<T>();
 			var options = serializer.Options.CaseSensitiveDeserialization
+#if IOS || CORE
+							  ? StringComparison.OrdinalIgnoreCase
+							  : StringComparison.Ordinal;
+#else
 							  ? StringComparison.InvariantCultureIgnoreCase
 							  : StringComparison.InvariantCulture;
+#endif
 			var entry = _descriptions[typeof (T)].FirstOrDefault(d => string.Equals(d.String, json.String, options));
 			if (entry == null)
 			{
@@ -72,6 +55,7 @@ namespace Manatee.Json.Serialization.Internal.Serializers
 			{
 				var type = typeof(T);
 				if (_descriptions.ContainsKey(type)) return;
+
 				var names = Enum.GetValues(type).Cast<T>();
 				var descriptions = names.Select(n => new Description { Value = n, String = GetDescription<T>(n.ToString()) }).ToList();
 				_descriptions.Add(type, descriptions);
@@ -80,9 +64,9 @@ namespace Manatee.Json.Serialization.Internal.Serializers
 		private static string GetDescription<T>(string name)
 		{
 			var type = typeof (T);
-			var memInfo = type.GetMember(name);
+			var memInfo = type.TypeInfo().GetMember(name);
 			var attributes = memInfo[0].GetCustomAttributes(typeof (DescriptionAttribute), false);
-			return attributes.Any() ? ((DescriptionAttribute)attributes[0]).Description : name;
+			return attributes.Any() ? ((DescriptionAttribute)attributes.First()).Description : name;
 		}
 		private static string BuildFlagsValues<T>(T obj, string separator)
 		{

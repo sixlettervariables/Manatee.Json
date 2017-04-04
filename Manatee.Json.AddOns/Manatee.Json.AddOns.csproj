@@ -50,9 +50,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Manatee.Json\Manatee.Json.csproj">
-      <Project>{6ADF0BCF-4E46-4605-A784-51EA6DAC81C7}</Project>
-      <Name>Manatee.Json</Name>
+    <ProjectReference Include="..\Manatee.Json\Manatee.Json-3.5.csproj">
+      <Project>{FA1616A9-DF70-40E9-B7E8-AAD1D8AC8CAA}</Project>
+      <Name>Manatee.Json-3.5</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

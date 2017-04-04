@@ -1,27 +1,4 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		JsonValue.cs
-	Namespace:		Manatee.Json
-	Class Name:		JsonValue
-	Purpose:		Represents a JSON value.
-
-***************************************************************************************/
-
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -279,14 +256,8 @@ namespace Manatee.Json
 		/// <param name="obj">The <see cref="T:System.Object"/> to compare with the current <see cref="T:System.Object"/>. </param><filterpriority>2</filterpriority>
 		public override bool Equals(object obj)
 		{
-			var json = obj as JsonValue;
-			if (json == null)
-			{
-				if (obj is string && Type == JsonValueType.String) return (string) obj == String;
-				if (obj is bool && Type == JsonValueType.Boolean) return (bool) obj == Boolean;
-				if (obj is IConvertible && !(obj is string || obj is bool) && Type == JsonValueType.Number) return Convert.ToDouble(obj) == Number;
-				return false;
-			}
+			var json = obj.AsJsonValue();
+			if (json == null) return false;
 			if (json.Type != Type) return false;
 			switch (Type)
 			{

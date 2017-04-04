@@ -1,27 +1,4 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		TypeGenerator.cs
-	Namespace:		Manatee.Json.Serialization.Internal
-	Class Name:		TypeGenerator
-	Purpose:		Generates types at run-time which implement a given interface.
-
-***************************************************************************************/
-
-#if !IOS
+﻿#if !IOS && !CORE
 
 using System;
 using System.Collections.Generic;
@@ -29,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Threading;
+using Manatee.Json.Internal;
 
 namespace Manatee.Json.Serialization.Internal
 {
@@ -45,10 +23,10 @@ namespace Manatee.Json.Serialization.Internal
 			var assemblyName = new AssemblyName(AssemblyName);
 			// Note: To debug IL generation, please use the following line with your own test path.  Also need to uncomment the Save() call in the Generate<T>() method.
 			//_assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave, @"E:\Projects\Manatee.Json\Manatee.Json.Tests\bin\Debug\");
-#if NET35 || NET35C
+#if NET35
 			_assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
 			_moduleBuilder = _assemblyBuilder.DefineDynamicModule(AssemblyName);
-#elif NET4 || NET4C || NET45
+#else
 			_assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
 			_moduleBuilder = _assemblyBuilder.DefineDynamicModule(AssemblyName, AssemblyName + ".dll");
 #endif
@@ -58,19 +36,21 @@ namespace Manatee.Json.Serialization.Internal
 		public static T Generate<T>()
 		{
 			var type = typeof (T);
-			if (_cache.ContainsKey(type))
-				return (T) ConstructInstance(_cache[type]);
-			if (!type.IsInterface)
-				throw new ArgumentException($"Type generation only works for interface types. Type '{type}' is not valid.");
-			var typeBuilder = CreateType(type);
-			ImplementProperties<T>(typeBuilder);
-			ImplementMethods<T>(typeBuilder);
-			ImplementEvents<T>(typeBuilder);
-			var concreteType = typeBuilder.CreateType();
-			_cache.Add(type, concreteType);
-			// Note: To debug IL generation, please uncomment the following line.  Also need to use the first _assemblyBuilder assignment in the static constructor.
-			//_assemblyBuilder.Save(@"Manatee.Json.DynamicTypes.dll");
-			return (T)ConstructInstance(concreteType);
+			Type concreteType;
+			if (!_cache.TryGetValue(type, out concreteType))
+			{
+				if (!type.IsInterface)
+					throw new ArgumentException($"Type generation only works for interface types. Type '{type}' is not valid.");
+				var typeBuilder = CreateType(type);
+				ImplementProperties<T>(typeBuilder);
+				ImplementMethods<T>(typeBuilder);
+				ImplementEvents<T>(typeBuilder);
+				concreteType = typeBuilder.CreateType();
+				_cache.Add(type, concreteType);
+				// Note: To debug IL generation, please uncomment the following line.  Also need to use the first _assemblyBuilder assignment in the static constructor.
+				//_assemblyBuilder.Save(@"Manatee.Json.DynamicTypes.dll");
+			}
+			return (T) ConstructInstance(concreteType);
 		}
 
 		private static TypeBuilder CreateType(Type type)

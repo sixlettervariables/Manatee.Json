@@ -1,31 +1,8 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		JsonSerializationTypeRegistry.cs
-	Namespace:		Manatee.Json.Serialization
-	Class Name:		JsonSerializationTypeRegistry
-	Purpose:		Manages methods for serializing object types which do not
-					implement IJsonCompatible and cannot be automatically serialized.
-
-***************************************************************************************/
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Manatee.Json.Internal;
 using Manatee.Json.Serialization.Internal;
 
 namespace Manatee.Json.Serialization
@@ -62,16 +39,20 @@ namespace Manatee.Json.Serialization
 
 		static JsonSerializationTypeRegistry()
 		{
-			_delegateProviders = typeof (JsonSerializationTypeRegistry).Assembly.GetTypes()
-																	  .Where(t => typeof (ISerializationDelegateProvider).IsAssignableFrom(t) &&
-																				  !t.IsAbstract &&
-																				  t.IsClass)
+			_delegateProviders = typeof(JsonSerializationTypeRegistry).TypeInfo().Assembly.GetTypes()
+																	  .Where(t => typeof(ISerializationDelegateProvider).IsAssignableFrom(t) &&
+																				  !t.TypeInfo().IsAbstract &&
+																				  t.TypeInfo().IsClass)
 																	  .Select(Activator.CreateInstance)
 																	  .Cast<ISerializationDelegateProvider>()
 																	  .ToList();
 			_toJsonConverters = new Dictionary<Type, Delegate>();
 			_fromJsonConverters = new Dictionary<Type, Delegate>();
+#if IOS
+			_autoregistrationMethod = typeof (JsonSerializationTypeRegistry).GetMethod("RegisterProviderDelegates");
+#else
 			_autoregistrationMethod = typeof (JsonSerializationTypeRegistry).GetMethod("RegisterProviderDelegates", BindingFlags.Static | BindingFlags.NonPublic);
+#endif
 		}
 
 		/// <summary>
@@ -114,7 +95,7 @@ namespace Manatee.Json.Serialization
 		public static bool IsRegistered(Type type)
 		{
 			if (_toJsonConverters.ContainsKey(type)) return true;
-			if (type.IsGenericTypeDefinition) return false;
+			if (type.TypeInfo().IsGenericTypeDefinition) return false;
 
 			var delegateProvider = _delegateProviders.FirstOrDefault(p => p.CanHandle(type));
 			if (delegateProvider == null) return false;

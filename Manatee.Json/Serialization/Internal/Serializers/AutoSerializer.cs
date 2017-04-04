@@ -1,28 +1,4 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		AutoSerializer.cs
-	Namespace:		Manatee.Json.Serialization.Internal.Serializers
-	Class Name:		AutoSerializer
-	Purpose:		Converts objects to and from JsonValues based on available
-					properties.
-
-***************************************************************************************/
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -39,7 +15,7 @@ namespace Manatee.Json.Serialization.Internal.Serializers
 			var json = new JsonObject();
 			var type = typeof (T);
 			if ((serializer.Options.TypeNameSerializationBehavior != TypeNameSerializationBehavior.Never) &&
-				(type.IsAbstract || type.IsInterface || (serializer.Options.TypeNameSerializationBehavior == TypeNameSerializationBehavior.Always)))
+				(type.TypeInfo().IsAbstract || type.TypeInfo().IsInterface || (serializer.Options.TypeNameSerializationBehavior == TypeNameSerializationBehavior.Always)))
 			{
 				type = obj.GetType();
 				json.Add(Constants.TypeKey, type.AssemblyQualifiedName);
@@ -158,7 +134,9 @@ namespace Manatee.Json.Serialization.Internal.Serializers
 			foreach (var memberInfo in members)
 			{
 				var name = memberInfo.SerializationName;
-				var kvp = json.Object.FirstOrDefault(pair => string.Compare(pair.Key, name, ignoreCase) == 0);
+				var kvp = json.Object.FirstOrDefault(pair => string.Compare(pair.Key, name, ignoreCase
+					                                                                            ? StringComparison.CurrentCultureIgnoreCase
+					                                                                            : StringComparison.CurrentCulture) == 0);
 				if (kvp.Key != null)
 				{
 					var value = kvp.Value;
@@ -196,7 +174,9 @@ namespace Manatee.Json.Serialization.Internal.Serializers
 			foreach (var memberInfo in members)
 			{
 				var name = memberInfo.SerializationName;
-				var kvp = json.Object.FirstOrDefault(pair => string.Compare(pair.Key, name, ignoreCase) == 0);
+				var kvp = json.Object.FirstOrDefault(pair => string.Compare(pair.Key, name, ignoreCase
+																								? StringComparison.CurrentCultureIgnoreCase
+																								: StringComparison.CurrentCulture) == 0);
 				if (kvp.Key != null)
 				{
 					var value = kvp.Value;
@@ -230,12 +210,13 @@ namespace Manatee.Json.Serialization.Internal.Serializers
 		}
 		private static void AssignObjectProperties(object obj, Dictionary<SerializationInfo, object> memberMap)
 		{
-			foreach (var memberInfo in memberMap.Keys)
+			foreach (var entry in memberMap)
 			{
+				var memberInfo = entry.Key;
 				if (memberInfo.MemberInfo is PropertyInfo)
-					((PropertyInfo) memberInfo.MemberInfo).SetValue(obj, memberMap[memberInfo], null);
+					((PropertyInfo) memberInfo.MemberInfo).SetValue(obj, entry.Value, null);
 				else
-					((FieldInfo) memberInfo.MemberInfo).SetValue(obj, memberMap[memberInfo]);
+					((FieldInfo) memberInfo.MemberInfo).SetValue(obj, entry.Value);
 			}
 		}
 		private static void AddSample(Type type, JsonArray json, JsonSerializer serializer)
@@ -250,8 +231,8 @@ namespace Manatee.Json.Serialization.Internal.Serializers
 		{
 			if (collectionType.IsArray)
 				return collectionType.GetElementType();
-			if (collectionType.IsGenericType && collectionType.GetGenericTypeDefinition().InheritsFrom(typeof (IEnumerable<>)))
-				return collectionType.GetGenericArguments().First();
+			if (collectionType.TypeInfo().IsGenericType && collectionType.GetGenericTypeDefinition().InheritsFrom(typeof(IEnumerable<>)))
+				return collectionType.GetTypeArguments().First();
 			return typeof (object);
 		}
 	}

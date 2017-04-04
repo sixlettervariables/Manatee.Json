@@ -2,17 +2,15 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
+/.tools
+/.release
 /.vs
-/Manatee.Json/bin
-/Manatee.Json/obj
-/Manatee.Json.Performance/bin
-/Manatee.Json.Performance/obj
+[Bb]in
+[Oo]bj
 /packages
-/Manatee.Json.Tests/bin
-/Manatee.Json.Tests/obj
 /NuGet
 /TestResults
-/Manatee.Json.AddOns/bin
-/Manatee.Json.AddOns/obj
-/Manatee.Json.AddOns.Tests/bin
-/Manatee.Json.AddOns.Tests/obj
+**/*.lock.json
+**/*.nuget.targets
+
+msbuild.log

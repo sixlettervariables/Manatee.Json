@@ -1,30 +1,8 @@
-﻿/***************************************************************************************
-
-	Copyright 2016 Greg Dennis
-
-	   Licensed under the Apache License, Version 2.0 (the "License");
-	   you may not use this file except in compliance with the License.
-	   You may obtain a copy of the License at
-
-		 http://www.apache.org/licenses/LICENSE-2.0
-
-	   Unless required by applicable law or agreed to in writing, software
-	   distributed under the License is distributed on an "AS IS" BASIS,
-	   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	   See the License for the specific language governing permissions and
-	   limitations under the License.
- 
-	File Name:		TemplateGenerator.cs
-	Namespace:		Manatee.Json.Serialization.Internal
-	Class Name:		TemplateGenerator
-	Purpose:		Creates JSON templates to represent types.
-
-***************************************************************************************/
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Manatee.Json.Internal;
 
 namespace Manatee.Json.Serialization.Internal
 {
@@ -40,7 +18,11 @@ namespace Manatee.Json.Serialization.Internal
 
 		static TemplateGenerator()
 		{
-			_buildMethod = typeof (TemplateGenerator).GetMethod("BuildInstance", BindingFlags.Static | BindingFlags.NonPublic);
+#if IOS
+			_buildMethod = typeof(TemplateGenerator).GetMethod("BuildInstance");
+#else
+			_buildMethod = typeof(TemplateGenerator).TypeInfo().GetMethod("BuildInstance", BindingFlags.Static | BindingFlags.NonPublic);
+#endif
 			_buildMethods = new Dictionary<Type, MethodInfo>();
 			_defaultInstances = new Dictionary<Type, object>
 				{
@@ -77,9 +59,9 @@ namespace Manatee.Json.Serialization.Internal
 			_generatedTypes.Add(type);
 			T instance;
 
-			if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>))
+			if (type.TypeInfo().IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
 			{
-				var valueType = type.GetGenericArguments().First();
+				var valueType = type.GetTypeArguments().First();
 				var buildMethod = GetBuildMethod(valueType);
 				var value = buildMethod.Invoke(null, new object[] {options});
 				instance = (T) value;
@@ -100,7 +82,11 @@ namespace Manatee.Json.Serialization.Internal
 		{
 			var type = typeof (T);
 
-			var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public)
+#if IOS
+			var properties = type.TypeInfo().DeclaredProperties
+#else
+			var properties = type.TypeInfo().GetProperties(BindingFlags.Instance | BindingFlags.Public)
+#endif
 								 .Where(p => p.GetSetMethod() != null)
 								 .Where(p => p.GetGetMethod() != null)
 								 .Where(p => !p.GetCustomAttributes(typeof (JsonIgnoreAttribute), true).Any());
@@ -115,7 +101,11 @@ namespace Manatee.Json.Serialization.Internal
 		}
 		private static void FillFields<T>(T instance, JsonSerializerOptions options)
 		{
-			var fields = typeof (T).GetFields(BindingFlags.Instance | BindingFlags.Public)
+#if IOS
+			var fields = typeof (T).TypeInfo().DeclaredFields
+#else
+			var fields = typeof (T).TypeInfo().GetFields(BindingFlags.Instance | BindingFlags.Public)
+#endif
 								   .Where(p => !p.IsInitOnly)
 								   .Where(p => !p.GetCustomAttributes(typeof (JsonIgnoreAttribute), true).Any());
 			foreach (var fieldInfo in fields)
@@ -134,12 +124,14 @@ namespace Manatee.Json.Serialization.Internal
 		}
 		internal static MethodInfo GetBuildMethod(Type type)
 		{
-			if (_buildMethods.ContainsKey(type))
-				return _buildMethods[type];
+			MethodInfo methodInfo;
+			if (!_buildMethods.TryGetValue(type, out methodInfo))
+			{
+				methodInfo = _buildMethod.MakeGenericMethod(type);
+				_buildMethods[type] = methodInfo;
+			}
 
-			var method = _buildMethod.MakeGenericMethod(type);
-			_buildMethods[type] = method;
-			return method;
+			return methodInfo;
 		}
 	}
 }
