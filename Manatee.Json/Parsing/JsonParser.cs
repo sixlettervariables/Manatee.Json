@@ -53,14 +53,15 @@ namespace Manatee.Json.Parsing
 				value = null;
 				return errorMessage;
 			}
-			var parser = Parsers.FirstOrDefault(p => p.Handles(c));
-			if (parser == null)
+
+			foreach (var parser in Parsers)
 			{
-				value = null;
-				return "Cannot determine type.";
+				if (parser.Handles(c))
+					return parser.TryParse(source, ref index, out value, allowExtraChars);
 			}
-			errorMessage = parser.TryParse(source, ref index, out value, allowExtraChars);
-			return errorMessage;
+
+			value = null;
+			return "Cannot determine type.";
 		}
 		public static string Parse(StreamReader stream, out JsonValue value)
 		{
@@ -70,14 +71,15 @@ namespace Manatee.Json.Parsing
 				value = null;
 				return errorMessage;
 			}
-			var parser = Parsers.FirstOrDefault(p => p.Handles(c));
-			if (parser == null)
+
+			foreach (var parser in Parsers)
 			{
-				value = null;
-				return "Cannot determine type.";
+				if (parser.Handles(c))
+					return parser.TryParse(stream, out value);
 			}
-			errorMessage = parser.TryParse(stream, out value);
-			return errorMessage;
+
+			value = null;
+			return "Cannot determine type.";
 		}
 		public static async Task<(string errorMessage, JsonValue value)> TryParseAsync(StreamReader stream, CancellationToken token)
 		{
@@ -86,12 +88,14 @@ namespace Manatee.Json.Parsing
 			{
 				return (errorMessage, null);
 			}
-			var parser = Parsers.FirstOrDefault(p => p.Handles(c));
-			if (parser == null)
+
+			foreach (var parser in Parsers)
 			{
-				return ("Cannot determine type.", null);
+				if (parser.Handles(c))
+					return await parser.TryParseAsync(stream, token);
 			}
-			return await parser.TryParseAsync(stream, token);
+
+			return ("Cannot determine type.", null);
 		}
 	}
 }

@@ -9,7 +9,7 @@ namespace Manatee.Json.Parsing
 	{
 		public bool Handles(char c)
 		{
-			return c.In('n', 'N');
+			return c == 'n' || c == 'N';
 		}
 		public string TryParse(string source, ref int index, out JsonValue value, bool allowExtraChars)
 		{

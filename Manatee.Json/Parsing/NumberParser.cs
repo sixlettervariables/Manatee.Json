@@ -11,12 +11,50 @@ namespace Manatee.Json.Parsing
 	internal class NumberParser : IJsonParser
 	{
 		private static readonly int[] FibSequence = {8, 13, 21, 34, 55, 89, 144};
-		private static readonly char[] NumberChars = "0123456798-+.eE".ToCharArray();
-
 		public bool Handles(char c)
 		{
-			return c.In('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-');
+			switch (c)
+			{
+				case '0':
+				case '1':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9':
+				case '-':
+					return true;
+			}
+			return false;
 		}
+
+		private static bool IsNumberChar(char c)
+		{
+			switch (c)
+			{
+				case '0':
+				case '1':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9':
+				case '-':
+				case '+':
+				case '.':
+				case 'e':
+				case 'E':
+					return true;
+			}
+			return false;
+		}
+
 		public string TryParse(string source, ref int index, out JsonValue value, bool allowExtraChars)
 		{
 			var bufferSize = 0;
@@ -36,8 +74,8 @@ namespace Manatee.Json.Parsing
 					buffer = newBuffer;
 				}
 				var c = source[index];
-				if (char.IsWhiteSpace(c) || c.In(',', ']', '}')) break;
-				var isNumber = NumberChars.Contains(c);
+				if (char.IsWhiteSpace(c) || (c == ',' || c == ']' || c == '}')) break;
+				var isNumber = IsNumberChar(c);
 				if (!isNumber && allowExtraChars) break;
 				if (!isNumber)
 				{
@@ -75,9 +113,9 @@ namespace Manatee.Json.Parsing
 					buffer = newBuffer;
 				}
 				var c = (char) stream.Peek();
-				if (char.IsWhiteSpace(c) || c.In(',', ']', '}')) break;
+				if (char.IsWhiteSpace(c) || (c == ',' || c == ']' || c == '}')) break;
 				stream.Read();
-				if (!NumberChars.Contains(c))
+				if (!IsNumberChar(c))
 				{
 					value = null;
 					return "Expected \',\', \']\', or \'}\'.";
@@ -114,9 +152,9 @@ namespace Manatee.Json.Parsing
 					buffer = newBuffer;
 				}
 				var c = (char)stream.Peek();
-				if (char.IsWhiteSpace(c) || c.In(',', ']', '}')) break;
+				if (char.IsWhiteSpace(c) || (c == ',' || c == ']' || c == '}')) break;
 				await stream.TryRead();
-				if (!NumberChars.Contains(c))
+				if (!IsNumberChar(c))
 					return ("Expected \',\', \']\', or \'}\'.", null);
 				buffer[bufferIndex] = c;
 				bufferIndex++;

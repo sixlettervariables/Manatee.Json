@@ -10,13 +10,21 @@ namespace Manatee.Json.Parsing
 	{
 		public bool Handles(char c)
 		{
-			return c.In('t', 'T', 'f', 'F');
+			switch (c)
+			{
+				case 't':
+				case 'T':
+				case 'f':
+				case 'F':
+					return true;
+			}
+			return false;
 		}
 		public string TryParse(string source, ref int index, out JsonValue value, bool allowExtraChars)
 		{
 			char[] buffer;
 			int count;
-			if (source[index].In('t', 'T'))
+			if (source[index] == 't' || source[index] == 'T')
 			{
 				buffer = new char[4];
 				count = 4;
@@ -52,7 +60,7 @@ namespace Manatee.Json.Parsing
 			char[] buffer;
 			int count;
 			var current = (char) stream.Read();
-			if (current.In('t', 'T'))
+			if (current == 't' || current == 'T')
 			{
 				buffer = new char[4];
 				count = 4;
